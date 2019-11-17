@@ -63,3 +63,61 @@ class Generator(nn.Module):
     x = F.relu(self.bn4(self.deconv3(x)))
     x = F.sigmoid(self.deconv4(x))
     return x.view(-1, 3, 64, 64)
+
+def train_gan_neural_painter(action_size: int,
+                             dim_size: int,
+                             batch_size: int,
+                             device: torch.device,
+                             data_dir: str,
+                             disc_iters: int = 5,
+                             save_every_n_steps: int = 25000,
+                             log_every_n_steps: int = 2000,
+                             tensorboard_every_n_steps: int = 100,
+                             tensorboard_log_dir: str = 'logdir',
+                             save_dir: str = 'gan_train_checkpoints',
+                             save_name: str = 'gan_neural_painter'):
+  # Initialize data loader
+  loader = FullActionStrokeDataLoader(data_dir, batch_size, False)
+
+  # Initialize networks and optimizers
+  discriminator = Discriminator(action_size, dim=dim_size).to(device).train()
+  generator = Generator(action_size, dim=dim_size).to(device).train()
+
+  optim_disc = optim.Adam(discriminator.parameters(), lr=1e-4)
+  optim_gen = optim.Adam(generator.parameters(), lr=1e-4)
+
+  batch_idx_offset = 0
+  # Initialize tensorboard a.k.a. greatest thing since sliced bread
+  writer = SummaryWriter(tensorboard_log_dir)
+  for batch_idx, batch in enumerate(loader):
+    batch_idx += batch_idx_offset
+
+    strokes = batch['stroke'].float().to(device)
+    actions = batch['action'].float().to(device)
+
+    if (batch_idx + 1) % (disc_iters + 1) == 0:  # Generator step every disc_iters+1 steps
+      for p in discriminator.parameters():
+        p.requires_grad = False  # to avoid computation
+      optim_gen.zero_grad()
+
+      generated = generator(actions)
+      generated_score = torch.mean(discriminator(generated, actions))
+
+      generator_loss = generated_score
+      generator_loss.backward()
+      optim_gen.step()
+
+      writer.add_scalar('generator_loss', generator_loss, batch_idx)
+    else:  # Discriminator steps for everything else
+      for p in generator.parameters():
+        p.requires_grad = True  # they are set to False in generator update
+      optim_disc.zero_grad()
+
+      real_score = torch.mean(discriminator(strokes, actions))
+
+      generated = generator(actions)
+      generated_score = torch.mean(discriminator(generated, actions))
+
+      disc_loss = real_score - generated_score
+
+      epsilon =
