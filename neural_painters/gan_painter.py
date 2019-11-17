@@ -109,7 +109,7 @@ def train_gan_neural_painter(action_size: int,
 
       writer.add_scalar('generator_loss', generator_loss, batch_idx)
     else:  # Discriminator steps for everything else
-      for p in generator.parameters():
+      for p in discriminator.parameters():
         p.requires_grad = True  # they are set to False in generator update
       optim_disc.zero_grad()
 
