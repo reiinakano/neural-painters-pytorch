@@ -31,7 +31,7 @@ def neural_painter_stroke_animation(neural_painter_fn,
                                     action_size,
                                     checkpoints_to_test,
                                     video_path,
-                                    num_acs = 8,
+                                    num_acs=8,
                                     duration=10.0,
                                     fps=30.0):
   acs = np.random.uniform(size=[num_acs, action_size])
