@@ -9,6 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from neural_painters.data import FullActionStrokeDataLoader
 
 
+# TODO: reconstruction loss and initialization
 class Discriminator(nn.Module):
   def __init__(self, action_size, dim=16):
     super(Discriminator, self).__init__()
@@ -68,6 +69,45 @@ class Generator(nn.Module):
     return x.view(-1, 3, 64, 64)
 
 
+def save_train_checkpoint(savedir: str,
+                          name: str,
+                          batch_idx: int,
+                          discriminator: Discriminator,
+                          generator: Generator,
+                          opt_disc,
+                          opt_gen):
+  os.makedirs(savedir, exist_ok=True)
+  obj_to_save = {
+    'batch_idx': batch_idx,
+    'discriminator_state_dict': discriminator.state_dict(),
+    'generator_state_dict': generator.state_dict(),
+    'opt_disc_state_dict': opt_disc.state_dict(),
+    'opt_gen_state_dict': opt_gen.state_dict()
+  }
+  torch.save(obj_to_save, os.path.join(savedir, '{}_{}.tar'.format(name, batch_idx)))
+  torch.save(obj_to_save, os.path.join(savedir, '{}_latest.tar'.format(name)))
+  print('saved {}'.format('{}_{}.tar'.format(name, batch_idx)))
+
+
+def load_from_latest_checkpoint(savedir: str,
+                                name: str,
+                                discriminator: Discriminator,
+                                generator: Generator,
+                                opt_disc,
+                                opt_gen):
+  latest_path = os.path.join(savedir, '{}_latest.tar'.format(name))
+  if not os.path.exists(latest_path):
+    print('{} not found. starting training from scratch'.format(latest_path))
+    return -1
+  checkpoint = torch.load(latest_path)
+  discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
+  generator.load_state_dict(checkpoint['generator_state_dict'])
+  opt_disc.load_state_dict(checkpoint['opt_disc_state_dict'])
+  opt_gen.load_state_dict(checkpoint['opt_gen_state_dict'])
+  print('Loaded from {}. Batch {}'.format(latest_path, checkpoint['batch_idx']))
+  return checkpoint['batch_idx']
+
+
 def calc_gradient_penalty(discriminator: nn.Module, real_data: torch.Tensor,
                           fake_data: torch.Tensor, actions: torch.Tensor,
                           device: torch.device, scale: float):
@@ -113,53 +153,68 @@ def train_gan_neural_painter(action_size: int,
   optim_disc = optim.Adam(discriminator.parameters(), lr=1e-4)
   optim_gen = optim.Adam(generator.parameters(), lr=1e-4)
 
-  batch_idx_offset = 0
+  # Initialize networks from latest checkpoint if it exists.
+  batch_idx_offset = 1 + load_from_latest_checkpoint(
+    save_dir,
+    save_name,
+    discriminator,
+    generator,
+    optim_disc,
+    optim_gen
+  )
   # Initialize tensorboard a.k.a. greatest thing since sliced bread
   writer = SummaryWriter(tensorboard_log_dir)
-  for batch_idx, batch in enumerate(loader):
-    batch_idx += batch_idx_offset
+  for _ in range(100):
+    for batch_idx, batch in enumerate(loader):
+      batch_idx += batch_idx_offset
 
-    strokes = batch['stroke'].float().to(device)
-    actions = batch['action'].float().to(device)
+      strokes = batch['stroke'].float().to(device)
+      actions = batch['action'].float().to(device)
 
-    if (batch_idx + 1) % (disc_iters + 1) == 0:  # Generator step every disc_iters+1 steps
-      for p in discriminator.parameters():
-        p.requires_grad = False  # to avoid computation (i copied this code, but this makes no sense i think?)
-      optim_gen.zero_grad()
+      if (batch_idx + 1) % (disc_iters + 1) == 0:  # Generator step every disc_iters+1 steps
+        for p in discriminator.parameters():
+          p.requires_grad = False  # to avoid computation (i copied this code, but this makes no sense i think?)
+        optim_gen.zero_grad()
 
-      generated = generator(actions)
-      generated_score = torch.mean(discriminator(generated, actions))
+        generated = generator(actions)
+        generated_score = torch.mean(discriminator(generated, actions))
 
-      generator_loss = generated_score
-      generator_loss.backward()
-      optim_gen.step()
+        generator_loss = generated_score
+        generator_loss.backward()
+        optim_gen.step()
 
-      writer.add_scalar('generator_loss', generator_loss, batch_idx)
-    else:  # Discriminator steps for everything else
-      for p in discriminator.parameters():
-        p.requires_grad = True  # they are set to False in generator update
-      optim_disc.zero_grad()
+        writer.add_scalar('generator_loss', generator_loss, batch_idx)
+      else:  # Discriminator steps for everything else
+        for p in discriminator.parameters():
+          p.requires_grad = True  # they are set to False in generator update
+        optim_disc.zero_grad()
 
-      real_score = torch.mean(discriminator(strokes, actions))
+        real_score = torch.mean(discriminator(strokes, actions))
 
-      generated = generator(actions)
-      generated_score = torch.mean(discriminator(generated, actions))
+        generated = generator(actions)
+        generated_score = torch.mean(discriminator(generated, actions))
 
-      gradient_penalty = calc_gradient_penalty(discriminator, strokes.detach(),
-                                               generated.detach(), actions,
-                                               device, 10.0)
+        gradient_penalty = calc_gradient_penalty(discriminator, strokes.detach(),
+                                                 generated.detach(), actions,
+                                                 device, 10.0)
 
-      disc_loss = real_score - generated_score + gradient_penalty
-      disc_loss.backward()
-      optim_disc.step()
+        disc_loss = real_score - generated_score + gradient_penalty
+        disc_loss.backward()
+        optim_disc.step()
 
-      writer.add_scalar('discriminator_loss', disc_loss, batch_idx)
-      writer.add_scalar('real_score', real_score, batch_idx)
-      writer.add_scalar('generated_score', generated_score, batch_idx)
-      writer.add_scalar('gradient_penalty', gradient_penalty, batch_idx)
+        writer.add_scalar('discriminator_loss', disc_loss, batch_idx)
+        writer.add_scalar('real_score', real_score, batch_idx)
+        writer.add_scalar('generated_score', generated_score, batch_idx)
+        writer.add_scalar('gradient_penalty', gradient_penalty, batch_idx)
 
-    if batch_idx % tensorboard_every_n_steps == 0:
-      writer.add_images('img_in', strokes[:3], batch_idx)
-      writer.add_images('img_out', generated[:3], batch_idx)
-    if batch_idx % log_every_n_steps == 0:
-      print('train batch {}'.format(batch_idx))
+      if batch_idx % tensorboard_every_n_steps == 0:
+        writer.add_images('img_in', strokes[:3], batch_idx)
+        writer.add_images('img_out', generated[:3], batch_idx)
+      if batch_idx % log_every_n_steps == 0:
+        print('train batch {}'.format(batch_idx))
+
+      if batch_idx % save_every_n_steps == 0:
+        save_train_checkpoint(save_dir, save_name, batch_idx,
+                              discriminator, generator,
+                              optim_disc, optim_gen)
+    batch_idx_offset = batch_idx + 1
