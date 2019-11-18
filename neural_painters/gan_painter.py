@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch import autograd
 from torch.utils.tensorboard import SummaryWriter
 
 from neural_painters.data import FullActionStrokeDataLoader
@@ -13,12 +14,12 @@ class Discriminator(nn.Module):
     super(Discriminator, self).__init__()
 
     self.fc1 = nn.Linear(action_size, dim)
-    self.conv1 = nn.Conv2d(3, dim, 4, stride=2)  # Padding?
-    self.conv2 = nn.Conv2d(dim, dim*2, 4, stride=2)
+    self.conv1 = nn.Conv2d(3, dim, 4, stride=2, padding=1)  # Padding?
+    self.conv2 = nn.Conv2d(dim, dim*2, 4, stride=2, padding=1)
     self.bn2 = nn.BatchNorm2d(dim*2)
-    self.conv3 = nn.Conv2d(dim*2, dim*4, 4, stride=2)
+    self.conv3 = nn.Conv2d(dim*2, dim*4, 4, stride=2, padding=1)
     self.bn3 = nn.BatchNorm2d(dim*4)
-    self.conv4 = nn.Conv2d(dim*4, dim*8, 4, stride=2)
+    self.conv4 = nn.Conv2d(dim*4, dim*8, 4, stride=2, padding=1)
     self.bn4 = nn.BatchNorm2d(dim*8)
     self.fc2 = nn.Linear(4*4*(dim*8), 1)
     self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
@@ -64,6 +65,27 @@ class Generator(nn.Module):
     x = F.sigmoid(self.deconv4(x))
     return x.view(-1, 3, 64, 64)
 
+
+def calc_gradient_penalty(discriminator: nn.Module, real_data: torch.Tensor,
+                          fake_data: torch.Tensor, actions: torch.Tensor,
+                          batch_size: int, device: torch.device, scale: float):
+  epsilon = torch.rand(batch_size, 1)  # in my tf implementation, same epsilon used for all samples in minibatch
+  epsilon = epsilon.expand(batch_size, real_data.nelement()//batch_size).contiguous().view(batch_size, 3, 64, 64)
+  epsilon = epsilon.to(device)
+
+  interpolates = epsilon * real_data + ((1.0 - epsilon) * fake_data)
+  interpolates.requires_grad = True
+
+  disc_interpolates = discriminator(interpolates, actions)
+  gradients = autograd.grad(disc_interpolates, interpolates,
+                            create_graph=True)[0]
+  gradients = gradients.view(batch_size, -1)
+
+  gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * scale
+
+  return gradient_penalty
+
+
 def train_gan_neural_painter(action_size: int,
                              dim_size: int,
                              batch_size: int,
@@ -97,7 +119,7 @@ def train_gan_neural_painter(action_size: int,
 
     if (batch_idx + 1) % (disc_iters + 1) == 0:  # Generator step every disc_iters+1 steps
       for p in discriminator.parameters():
-        p.requires_grad = False  # to avoid computation
+        p.requires_grad = False  # to avoid computation (i copied this code, but this makes no sense i think?)
       optim_gen.zero_grad()
 
       generated = generator(actions)
@@ -118,6 +140,15 @@ def train_gan_neural_painter(action_size: int,
       generated = generator(actions)
       generated_score = torch.mean(discriminator(generated, actions))
 
-      disc_loss = real_score - generated_score
+      gradient_penalty = calc_gradient_penalty(discriminator, strokes.detach(),
+                                               generated.detach(), actions,
+                                               batch_size, device, 10.0)
 
-      epsilon =
+      disc_loss = real_score - generated_score + gradient_penalty
+      disc_loss.backward()
+      optim_disc.step()
+
+      writer.add_scalar('discriminator_loss', disc_loss, batch_idx)
+      writer.add_scalar('real_score', real_score, batch_idx)
+      writer.add_scalar('generated_score', generated_score, batch_idx)
+      writer.add_scalar('gradient_penalty', gradient_penalty, batch_idx)
