@@ -15,7 +15,7 @@ class Discriminator(nn.Module):
     self.dim = dim
 
     self.fc1 = nn.Linear(action_size, dim)
-    self.conv1 = nn.Conv2d(3, dim, 4, stride=2, padding=1)  # Padding?
+    self.conv1 = nn.Conv2d(3, dim, 4, stride=2, padding=1)
     self.conv2 = nn.Conv2d(dim, dim*2, 4, stride=2, padding=1)
     self.bn2 = nn.BatchNorm2d(dim*2)
     self.conv3 = nn.Conv2d(dim*2, dim*4, 4, stride=2, padding=1)
@@ -80,6 +80,7 @@ def calc_gradient_penalty(discriminator: nn.Module, real_data: torch.Tensor,
 
   disc_interpolates = discriminator(interpolates, actions)
   gradients = autograd.grad(disc_interpolates, interpolates,
+                            grad_outputs=torch.ones_like(disc_interpolates),
                             create_graph=True)[0]
   gradients = gradients.view(batch_size, -1)
 
