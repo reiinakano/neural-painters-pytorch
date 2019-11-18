@@ -69,6 +69,22 @@ class Generator(nn.Module):
     return x.view(-1, 3, 64, 64)
 
 
+class GANNeuralPainter(nn.Module):
+  """GAN Neural Painter nn.Module for inference"""
+  def __init__(self, action_size, dim=16):
+    super(GANNeuralPainter, self).__init__()
+
+    self.generator = Generator(action_size, dim)
+
+  def forward(self, x):
+    return self.generator(x)
+
+  def load_from_train_checkpoint(self, ckpt_path):
+    checkpoint = torch.load(ckpt_path)
+    self.generator.load_state_dict(checkpoint['generator_state_dict'])
+    print('Loaded from {}. Batch {}'.format(ckpt_path, checkpoint['batch_idx']))
+
+
 def save_train_checkpoint(savedir: str,
                           name: str,
                           batch_idx: int,
