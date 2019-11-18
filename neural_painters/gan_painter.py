@@ -152,3 +152,9 @@ def train_gan_neural_painter(action_size: int,
       writer.add_scalar('real_score', real_score, batch_idx)
       writer.add_scalar('generated_score', generated_score, batch_idx)
       writer.add_scalar('gradient_penalty', gradient_penalty, batch_idx)
+
+    if batch_idx % tensorboard_every_n_steps == 0:
+      writer.add_images('img_in', strokes[:3], batch_idx)
+      writer.add_images('img_out', generated[:3], batch_idx)
+    if batch_idx % log_every_n_steps == 0:
+      print('train batch {}'.format(batch_idx))
