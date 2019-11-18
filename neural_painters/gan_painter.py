@@ -41,11 +41,12 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-  def __init__(self, action_size, dim=16):
+  def __init__(self, action_size, dim=16, noise_dim=16):
     super(Generator, self).__init__()
     self.dim = dim
+    self.noise_dim = noise_dim
 
-    self.fc1 = nn.Linear(action_size, 4*4*(dim*16))  # This seems.. wrong.  Should it be dim*8?
+    self.fc1 = nn.Linear(action_size + noise_dim, 4*4*(dim*16))  # This seems.. wrong.  Should it be dim*8?
     self.bn1 = nn.BatchNorm2d(dim*16)
     self.deconv1 = nn.ConvTranspose2d(dim*16, dim*8, 4, stride=2, padding=1)
     self.bn2 = nn.BatchNorm2d(dim*8)
@@ -57,7 +58,11 @@ class Generator(nn.Module):
     self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
 
   def forward(self, actions):
-    # TODO: Add random noise
+    if self.noise_dim > 0:
+      batch_size = actions.shape[0]
+      actions = torch.cat([actions,
+                           torch.randn(batch_size, self.noise_dim).to(actions.device)],
+                          dim=1)
 
     x = self.fc1(actions)
     x = x.view(-1, self.dim*16, 4, 4)
@@ -71,10 +76,10 @@ class Generator(nn.Module):
 
 class GANNeuralPainter(nn.Module):
   """GAN Neural Painter nn.Module for inference"""
-  def __init__(self, action_size, dim=16):
+  def __init__(self, action_size, dim=16, noise_dim=16):
     super(GANNeuralPainter, self).__init__()
 
-    self.generator = Generator(action_size, dim)
+    self.generator = Generator(action_size, dim, noise_dim)
 
   def forward(self, x):
     return self.generator(x)
@@ -152,6 +157,7 @@ def train_gan_neural_painter(action_size: int,
                              batch_size: int,
                              device: torch.device,
                              data_dir: str,
+                             noise_dim: int = 16,
                              disc_iters: int = 5,
                              save_every_n_steps: int = 25000,
                              log_every_n_steps: int = 2000,
@@ -164,7 +170,7 @@ def train_gan_neural_painter(action_size: int,
 
   # Initialize networks and optimizers
   discriminator = Discriminator(action_size, dim=dim_size).to(device).train()
-  generator = Generator(action_size, dim=dim_size).to(device).train()
+  generator = Generator(action_size, dim=dim_size, noise_dim=noise_dim).to(device).train()
 
   optim_disc = optim.Adam(discriminator.parameters(), lr=1e-4)
   optim_gen = optim.Adam(generator.parameters(), lr=1e-4)
