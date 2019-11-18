@@ -72,7 +72,8 @@ def calc_gradient_penalty(discriminator: nn.Module, real_data: torch.Tensor,
                           fake_data: torch.Tensor, actions: torch.Tensor,
                           device: torch.device, scale: float):
   batch_size = real_data.shape[0]
-  epsilon = torch.rand(batch_size, 1)  # in my tf implementation, same epsilon used for all samples in minibatch
+  #epsilon = torch.rand(batch_size, 1)  # in my tf implementation, same epsilon used for all samples in minibatch
+  epsilon = torch.rand(1, 1)
   epsilon = epsilon.expand(batch_size, real_data.nelement()//batch_size).contiguous().view(batch_size, 3, 64, 64)
   epsilon = epsilon.to(device)
 
