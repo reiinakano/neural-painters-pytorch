@@ -70,7 +70,8 @@ class Generator(nn.Module):
 
 def calc_gradient_penalty(discriminator: nn.Module, real_data: torch.Tensor,
                           fake_data: torch.Tensor, actions: torch.Tensor,
-                          batch_size: int, device: torch.device, scale: float):
+                          device: torch.device, scale: float):
+  batch_size = real_data.shape[0]
   epsilon = torch.rand(batch_size, 1)  # in my tf implementation, same epsilon used for all samples in minibatch
   epsilon = epsilon.expand(batch_size, real_data.nelement()//batch_size).contiguous().view(batch_size, 3, 64, 64)
   epsilon = epsilon.to(device)
@@ -145,7 +146,7 @@ def train_gan_neural_painter(action_size: int,
 
       gradient_penalty = calc_gradient_penalty(discriminator, strokes.detach(),
                                                generated.detach(), actions,
-                                               batch_size, device, 10.0)
+                                               device, 10.0)
 
       disc_loss = real_score - generated_score + gradient_penalty
       disc_loss.backward()
