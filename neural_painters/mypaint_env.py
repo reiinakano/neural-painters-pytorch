@@ -4,7 +4,7 @@ try:
   from lib import surface, tiledsurface, brush  # , floodfill for latest mypaint
 except ImportError:
   print("Cannot find import name `lib` (MyPaint). Make sure to add it to your path e.g. with sys.append()."
-        "See example Colab notebooks for details.")
+        "See example Colab notebooks for details on installation and importing.")
   raise
 
 import numpy as np

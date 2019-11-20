@@ -33,7 +33,10 @@ def neural_painter_stroke_animation(neural_painter_fn,
                                     video_path,
                                     num_acs=8,
                                     duration=10.0,
-                                    fps=30.0):
+                                    fps=30.0,
+                                    real_env=None):
+  if real_env:
+    real_env.reset()
   acs = np.random.uniform(size=[num_acs, action_size])
 
   neural_painters = []
@@ -47,15 +50,18 @@ def neural_painter_stroke_animation(neural_painter_fn,
     t = np.abs((1.0 - np.cos(num_acs * np.pi * np.mod(t_, 1. / num_acs))) / 2.0)
 
     new_ac = (1 - t) * acs[int(np.floor(t_ * num_acs))] + t * acs[int((np.floor(t_ * num_acs) + 1) % num_acs)]
-    # env.draw(new_ac)
-    # im = env.image
-    # im = im[:, :, :3]
+    if real_env:
+      real_env.draw(new_ac)
+      im = real_env.image
+      im = im[:, :, :3]
     stack_these = []
     for neural_painter in neural_painters:
       with torch.no_grad():
         decoded = neural_painter(torch.FloatTensor([new_ac]))
       decoded = np.transpose(decoded.numpy(), [0, 2, 3, 1])[0]
       decoded = (decoded * 255).astype(np.uint8)
+      if real_env:
+        decoded = np.concatenate([im, decoded], 1)
       stack_these.append(decoded)
     return np.concatenate(stack_these, axis=0)
 
