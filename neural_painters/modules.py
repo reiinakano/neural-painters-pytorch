@@ -8,7 +8,9 @@ def paint_over_canvas(canvas: torch.Tensor, stroke: torch.Tensor, color: torch.T
                       ):
   darkness_mask = torch.mean(stroke, dim=1, keepdim=True)  # Take mean over color channels
   darkness_mask = 1. - darkness_mask
-  darkness_mask = darkness_mask / torch.max(darkness_mask, dim=[2, 3], keepdim=True)
+  normalizer, _ = torch.max(darkness_mask, dim=2, keepdim=True)
+  normalizer, _ = torch.max(normalizer, dim=3, keepdim=True)
+  darkness_mask = darkness_mask / normalizer
 
   color_action = color.view(-1, 3, 1, 1)
   color_action = color_action.repeat(1, 1, canvas_height, canvas_width)
