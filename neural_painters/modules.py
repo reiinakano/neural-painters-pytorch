@@ -3,9 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def paint_over_canvas(canvas: torch.Tensor, stroke: torch.Tensor, color: torch.Tensor,
-                      canvas_height: int, canvas_width: int,
-                      ):
+def paint_over_canvas(canvas: torch.Tensor, stroke: torch.Tensor, color: torch.Tensor):
+  _, _, canvas_height, canvas_width = canvas.shape
   darkness_mask = torch.mean(stroke, dim=1, keepdim=True)  # Take mean over color channels
   darkness_mask = 1. - darkness_mask
   normalizer, _ = torch.max(darkness_mask, dim=2, keepdim=True)
@@ -44,8 +43,7 @@ class NeuralCanvas(nn.Module):
     intermediate_canvases.append(next_canvas)
     for i in range(num_strokes):
       stroke = self.neural_painter(actions[i])
-      next_canvas = paint_over_canvas(next_canvas, stroke, actions[i, :, 6:9],
-                                      self.final_canvas_height, self.final_canvas_width)
+      next_canvas = paint_over_canvas(next_canvas, stroke, actions[i, :, 6:9])
       intermediate_canvases.append(next_canvas)
 
     return next_canvas, intermediate_canvases

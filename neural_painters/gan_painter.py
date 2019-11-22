@@ -41,10 +41,11 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-  def __init__(self, action_size, dim=16, noise_dim=16):
+  def __init__(self, action_size, dim=16, noise_dim=16, stochastic=False):
     super(Generator, self).__init__()
     self.dim = dim
     self.noise_dim = noise_dim
+    self.stochastic = stochastic
 
     self.fc1 = nn.Linear(action_size + noise_dim, 4*4*(dim*16))  # This seems.. wrong.  Should it be dim*8?
     self.bn1 = nn.BatchNorm2d(dim*16)
@@ -61,7 +62,8 @@ class Generator(nn.Module):
     if self.noise_dim > 0:
       batch_size = actions.shape[0]
       actions = torch.cat([actions,
-                           torch.randn(batch_size, self.noise_dim).to(actions.device)],
+                           torch.randn(batch_size, self.noise_dim).to(actions.device) if not self.stochastic else
+                           torch.ones(batch_size, self.noise_dim).to(actions.device) * 0.5],
                           dim=1)
 
     x = self.fc1(actions)
@@ -76,10 +78,10 @@ class Generator(nn.Module):
 
 class GANNeuralPainter(nn.Module):
   """GAN Neural Painter nn.Module for inference"""
-  def __init__(self, action_size, dim=16, noise_dim=16):
+  def __init__(self, action_size, dim=16, noise_dim=16, stochastic=False):
     super(GANNeuralPainter, self).__init__()
 
-    self.generator = Generator(action_size, dim, noise_dim)
+    self.generator = Generator(action_size, dim, noise_dim, stochastic)
 
   def forward(self, x):
     return self.generator(x)
