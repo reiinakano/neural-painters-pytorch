@@ -51,14 +51,19 @@ class NeuralCanvas(nn.Module):
 
 
 class RandomRotate(nn.Module):
-  def __init__(self, angle=10):
+  def __init__(self, angle=10, same_throughout_batch=False):
     super(RandomRotate, self).__init__()
     self.angle=angle
+    self.same_throughout_batch = same_throughout_batch
 
   def forward(self, img: torch.tensor):
     b, _, h, w = img.shape
     # create transformation (rotation)
-    angle = torch.randn(b, device=img.device) * self.angle
+    if not self.same_throughout_batch:
+      angle = torch.randn(b, device=img.device) * self.angle
+    else:
+      angle = torch.randn(1, device=img.device) * self.angle
+      angle = angle.repeat(b)
     center = torch.ones(b, 2, device=img.device)
     center[..., 0] = img.shape[3] / 2  # x
     center[..., 1] = img.shape[2] / 2  # y
