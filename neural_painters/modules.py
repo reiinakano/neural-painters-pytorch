@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+
+import kornia
 
 
 def paint_over_canvas(canvas: torch.Tensor, stroke: torch.Tensor, color: torch.Tensor):
@@ -47,3 +48,38 @@ class NeuralCanvas(nn.Module):
       intermediate_canvases.append(next_canvas)
 
     return next_canvas, intermediate_canvases
+
+
+class RandomRotate(nn.Module):
+  def __init__(self, angle=10):
+    super(RandomRotate, self).__init__()
+    self.angle=angle
+
+  def forward(self, img: torch.tensor):
+    b, _, h, w = img.shape
+    # create transformation (rotation)
+    angle = torch.randn(b, device=img.device) * self.angle
+    center = torch.ones(b, 2, device=img.device)
+    center[..., 0] = img.shape[3] / 2  # x
+    center[..., 1] = img.shape[2] / 2  # y
+    # define the scale factor
+    scale = torch.ones(b, device=img.device)
+    M = kornia.get_rotation_matrix2d(center, angle, scale)
+    img_warped = kornia.warp_affine(img, M, dsize=(h, w))
+    return img_warped
+
+
+# create a module to normalize input image so we can easily put it in a
+# nn.Sequential
+class Normalization(nn.Module):
+  def __init__(self, mean, std):
+    super(Normalization, self).__init__()
+    # .view the mean and std to make them [C x 1 x 1] so that they can
+    # directly work with image Tensor of shape [B x C x H x W].
+    # B is batch size. C is number of channels. H is height and W is width.
+    self.mean = torch.tensor(mean).view(-1, 1, 1)
+    self.std = torch.tensor(std).view(-1, 1, 1)
+
+  def forward(self, img):
+    # normalize img
+    return (img - self.mean) / self.std
