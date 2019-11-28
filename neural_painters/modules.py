@@ -56,7 +56,7 @@ class NeuralCanvasStitched(nn.Module):
   low-res neural painter.
   Maps a sequence of brushstrokes to a fully stitched canvas.
   """
-  def __init___(self, neural_painter, overlap_px=10, repeat_h=8, repeat_w=8, strokes_per_block=5):
+  def __init__(self, neural_painter, overlap_px=10, repeat_h=8, repeat_w=8, strokes_per_block=5):
     super(NeuralCanvasStitched, self).__init__()
 
     self.neural_painter = neural_painter
