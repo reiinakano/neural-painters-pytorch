@@ -50,6 +50,55 @@ class NeuralCanvas(nn.Module):
     return next_canvas, intermediate_canvases
 
 
+class NeuralCanvasStitched(nn.Module):
+  """
+  NeuralCanvasStitched is a collection of NeuralCanvas stitched together. Used to get higher resolution images from a
+  low-res neural painter.
+  Maps a sequence of brushstrokes to a fully stitched canvas.
+  """
+  def __init___(self, neural_painter, overlap_px=10, repeat_h=8, repeat_w=8, strokes_per_block=5):
+    super(NeuralCanvasStitched, self).__init__()
+
+    self.neural_painter = neural_painter
+    self.overlap_px = overlap_px
+    self.repeat_h = repeat_h
+    self.repeat_w = repeat_w
+    self.strokes_per_block = strokes_per_block
+
+    self.final_canvas_h = 64*repeat_h - overlap_px*(repeat_h - 1)
+    self.final_canvas_w = 64*repeat_w - overlap_px*(repeat_w - 1)
+    self.total_num_strokes = strokes_per_block * repeat_h * repeat_w
+
+    print(f'final canvas size H: {self.final_canvas_h} W: {self.final_canvas_w}\t'
+          f'total number of strokes: {self.total_num_strokes}')
+
+  def forward(self, actions: torch.Tensor):
+    num_strokes, batch_size, action_size = actions.shape
+    assert num_strokes == self.total_num_strokes
+
+    intermediate_canvases = []
+    next_canvas = torch.ones(batch_size, 3, self.final_canvas_h, self.final_canvas_w).to(actions.device)
+    intermediate_canvases.append(next_canvas)
+
+    block_ctr = 0
+    for a in range(self.repeat_h):
+      for b in range(self.repeat_w):
+        for local_stroke_idx in range(self.strokes_per_block):
+          current_action = actions[block_ctr*self.strokes_per_block + local_stroke_idx]
+          decoded_stroke = self.neural_painter(current_action)
+          padding = nn.ConstantPad2d(
+            [(64-self.overlap_px)*b,
+             (64-self.overlap_px)*(self.repeat_w-1-b),
+             (64-self.overlap_px)*a,
+             (64-self.overlap_px)*(self.repeat_h-1-a)], 1)
+          padded_stroke = padding(decoded_stroke)
+          next_canvas = paint_over_canvas(next_canvas, padded_stroke, current_action[:, 6:9])
+          intermediate_canvases.append(next_canvas)  # Is this efficient? Maybe we should only keep it in memory in certain cases?
+
+        block_ctr += 1
+    return next_canvas, intermediate_canvases
+
+
 class RandomRotate(nn.Module):
   def __init__(self, angle=10, same_throughout_batch=False):
     super(RandomRotate, self).__init__()
