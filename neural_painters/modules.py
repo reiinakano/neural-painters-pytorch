@@ -1,5 +1,8 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
+import random
 
 import kornia
 
@@ -97,6 +100,29 @@ class NeuralCanvasStitched(nn.Module):
 
         block_ctr += 1
     return next_canvas, intermediate_canvases
+
+
+class RandomScale(nn.Module):
+  def __init__(self, scales):
+    super(RandomScale, self).__init__()
+
+    self.scales = scales
+
+  def forward(self, x: torch.Tensor):
+    scale = self.scales[random.randint(0, len(self.scales)-1)]
+    return F.interpolate(x, scale_factor=scale, mode='bilinear')
+
+
+class RandomCrop(nn.Module):
+  def __init__(self, size: int):
+    super(RandomCrop, self).__init__()
+    self.size = size
+
+  def forward(self, x: torch.Tensor):
+    batch_size, _, h, w = x.shape
+    h_move = random.randint(0, self.size)
+    w_move = random.randint(0, self.size)
+    return x[:, :, h_move:h-self.size+h_move, w_move:w-self.size+w_move]
 
 
 class RandomRotate(nn.Module):
