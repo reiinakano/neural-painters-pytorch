@@ -9,7 +9,17 @@ from torch.utils.tensorboard import SummaryWriter
 from neural_painters.data import FullActionStrokeDataLoader
 
 
-# TODO: reconstruction loss and initialization
+# custom weights initialization called on netG and netD
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
+
+# TODO: reconstruction loss
 class Discriminator(nn.Module):
   def __init__(self, action_size, dim=16):
     super(Discriminator, self).__init__()
@@ -173,6 +183,8 @@ def train_gan_neural_painter(action_size: int,
   discriminator = Discriminator(action_size, dim=dim_size).to(device).train()
   generator = Generator(action_size, dim=dim_size, noise_dim=noise_dim,
                         num_deterministic=0).to(device).train()  # Must always train fully stochastically
+  discriminator.apply(weights_init)
+  generator.apply(weights_init)
 
   optim_disc = optim.Adam(discriminator.parameters(), lr=1e-4)
   optim_gen = optim.Adam(generator.parameters(), lr=1e-4)
