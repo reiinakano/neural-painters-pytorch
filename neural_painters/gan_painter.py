@@ -140,6 +140,24 @@ def load_from_latest_checkpoint(savedir: str,
   return checkpoint['batch_idx']
 
 
+def reconstruction_loss_function(recon_x, x, mask_multiplier):
+  """
+  This is MSE but with non-whitespace areas of the brushstroke weighted by mask_multiplier.
+  """
+  if mask_multiplier != 1.:
+    mask = torch.mean(x, dim=1)
+    stroke_whitespace = torch.eq(mask, torch.ones_like(mask))
+    mask = torch.where(stroke_whitespace, torch.ones_like(mask),
+                       torch.ones_like(mask) * mask_multiplier)
+    mask = mask.view(-1, 1, 64, 64)
+    MSE = torch.sum((recon_x - x) ** 2 * mask, dim=[1, 2, 3])
+  else:
+    mask = None
+    MSE = torch.sum((recon_x - x) ** 2, dim=[1, 2, 3])
+  MSE = torch.mean(MSE)
+  return MSE, mask
+
+
 def calc_gradient_penalty(discriminator: nn.Module, real_data: torch.Tensor,
                           fake_data: torch.Tensor, actions: torch.Tensor,
                           device: torch.device, scale: float):
@@ -170,6 +188,7 @@ def train_gan_neural_painter(action_size: int,
                              data_dir: str,
                              noise_dim: int = 16,
                              disc_iters: int = 5,
+                             use_reconstruction_loss: bool = False,
                              save_every_n_steps: int = 25000,
                              log_every_n_steps: int = 2000,
                              tensorboard_every_n_steps: int = 100,
@@ -216,10 +235,18 @@ def train_gan_neural_painter(action_size: int,
         generated_score = torch.mean(discriminator(generated, actions))
 
         generator_loss = generated_score
+
+        if use_reconstruction_loss:
+          uneven_mult = 10. if batch_idx < 1700000 else 1.
+          reconstruction_loss = reconstruction_loss_function(generated, strokes, uneven_mult)
+          generator_loss += 10*reconstruction_loss
+
         generator_loss.backward()
         optim_gen.step()
 
-        writer.add_scalar('generator_loss', generator_loss, batch_idx)
+        writer.add_scalar('generator_score', generator_loss, batch_idx)
+        if use_reconstruction_loss:
+          writer.add_scalar('reconstruction_loss', reconstruction_loss, batch_idx)
       else:  # Discriminator steps for everything else
         for p in discriminator.parameters():
           p.requires_grad = True  # they are set to False in generator update
