@@ -236,17 +236,17 @@ def train_gan_neural_painter(action_size: int,
 
         generator_loss = generated_score
 
-        if use_reconstruction_loss:
-          uneven_mult = 10. if batch_idx < 1700000 else 1.
+        if use_reconstruction_loss and batch_idx < 300000:
+          uneven_mult = 10. if batch_idx < 100000 else 1.
           reconstruction_loss, _ = reconstruction_loss_function(generated, strokes, uneven_mult)
           generator_loss += 10*reconstruction_loss
+          writer.add_scalar('reconstruction_loss', reconstruction_loss, batch_idx)
 
         generator_loss.backward()
         optim_gen.step()
 
-        writer.add_scalar('generator_score', generator_loss, batch_idx)
-        if use_reconstruction_loss:
-          writer.add_scalar('reconstruction_loss', reconstruction_loss, batch_idx)
+        writer.add_scalar('generator_loss', generator_loss, batch_idx)
+
       else:  # Discriminator steps for everything else
         for p in discriminator.parameters():
           p.requires_grad = True  # they are set to False in generator update
