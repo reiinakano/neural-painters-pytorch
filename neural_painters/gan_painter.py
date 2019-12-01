@@ -239,7 +239,7 @@ def train_gan_neural_painter(action_size: int,
 
         if use_reconstruction_loss and batch_idx < stop_reconstruction_loss_after_n_steps:
           uneven_mult = 10. if batch_idx < 100000 else 1.  # Do I need this?
-          reconstruction_loss_mult = 10. if batch_idx < 500000 else 10**((batch_idx//50000)-10)
+          reconstruction_loss_mult = 10. if batch_idx < 500000 else 10**(-(batch_idx//50000)+10)
           reconstruction_loss, _ = reconstruction_loss_function(generated, strokes, uneven_mult)
           generator_loss += reconstruction_loss_mult*reconstruction_loss
           writer.add_scalar('reconstruction_loss', reconstruction_loss, batch_idx)
