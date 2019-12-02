@@ -2,6 +2,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+from typing import List,Union
+
 import moviepy.editor as mpy
 
 
@@ -15,6 +17,17 @@ def plot_images(images, figsize=(16, 16)):
     plt.grid(False)
     plt.imshow(img)
   plt.show()
+
+
+def animate_frames(frames, video_path):
+  def frame(t):
+    t = int(t * 10.)
+    if t >= len(frames):
+      t = len(frames) - 1
+    return frames[t]
+
+  clip = mpy.VideoClip(frame, duration=len(frames) // 10)
+  clip.write_videofile(video_path, fps=10.)
 
 
 def validate_neural_painter(strokes, actions, neural_painter, checkpoints_to_test):
@@ -68,3 +81,27 @@ def neural_painter_stroke_animation(neural_painter_fn,
   clip = mpy.VideoClip(frame, duration=duration)
   clip.write_videofile(video_path, fps=fps)
   print("written to {}".format(video_path))
+
+
+def animate_strokes_on_canvas(intermediate_canvases: List[torch.Tensor],
+                              target_image: Union[torch.tensor, None],
+                              video_path: str, skip_every_n: int = 1,
+                              batch_idx: int = 0):
+  _, _, h, w = intermediate_canvases[0].shape
+
+  # We take only one sample of the batch for each step and concatenate everything into a numpy array
+  intermediate_canvases = [(x.detach().cpu().numpy() * 255).astype(np.uint8).transpose(0, 2, 3, 1)[batch_idx]
+                           for x in intermediate_canvases]
+  intermediate_canvases = np.stack(intermediate_canvases)
+  intermediate_canvases = intermediate_canvases[::skip_every_n]
+
+  to_plot = intermediate_canvases
+
+  if target_image is not None:
+    target_images = (target_image.detach().cpu().numpy() * 255).astype(np.uint8).reshape(1, 3, h, w).transpose(0, 2, 3, 1)
+    target_images = np.tile(target_images, [len(intermediate_canvases), 1, 1, 1])
+    to_plot = np.concatenate([target_images, to_plot], axis=(2 if h >= w else 1))
+
+  to_plot = np.concatenate([to_plot, np.tile(to_plot[-1:, :, :, :], [50, 1, 1, 1])], axis=0)
+
+  animate_frames(to_plot, video_path)

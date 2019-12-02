@@ -44,11 +44,11 @@ class NeuralCanvas(nn.Module):
 
     intermediate_canvases = []
     next_canvas = torch.ones(batch_size, 3, self.final_canvas_height, self.final_canvas_width).to(actions.device)
-    intermediate_canvases.append(next_canvas)
+    intermediate_canvases.append(next_canvas.detach().cpu())
     for i in range(num_strokes):
       stroke = self.neural_painter(actions[i])
       next_canvas = paint_over_canvas(next_canvas, stroke, actions[i, :, 6:9])
-      intermediate_canvases.append(next_canvas)
+      intermediate_canvases.append(next_canvas.detach().cpu())
 
     return next_canvas, intermediate_canvases
 
@@ -81,7 +81,7 @@ class NeuralCanvasStitched(nn.Module):
 
     intermediate_canvases = []
     next_canvas = torch.ones(batch_size, 3, self.final_canvas_h, self.final_canvas_w).to(actions.device)
-    intermediate_canvases.append(next_canvas)
+    intermediate_canvases.append(next_canvas.detach().cpu())
 
     block_ctr = 0
     for a in range(self.repeat_h):
@@ -96,7 +96,7 @@ class NeuralCanvasStitched(nn.Module):
              (64-self.overlap_px)*(self.repeat_h-1-a)], 1)
           padded_stroke = padding(decoded_stroke)
           next_canvas = paint_over_canvas(next_canvas, padded_stroke, current_action[:, 6:9])
-          intermediate_canvases.append(next_canvas)  # Is this efficient? Maybe we should only keep it in memory in certain cases?
+          intermediate_canvases.append(next_canvas.detach().cpu())  # Is this efficient? Maybe we should only keep it in memory in certain cases?
 
         block_ctr += 1
     return next_canvas, intermediate_canvases
