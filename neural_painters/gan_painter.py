@@ -6,6 +6,8 @@ import torch.optim as optim
 from torch import autograd
 from torch.utils.tensorboard import SummaryWriter
 
+import gdown
+
 from neural_painters.data import FullActionStrokeDataLoader
 
 
@@ -19,7 +21,6 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-# TODO: reconstruction loss
 class Discriminator(nn.Module):
   def __init__(self, action_size, dim=16):
     super(Discriminator, self).__init__()

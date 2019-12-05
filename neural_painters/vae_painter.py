@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
+import gdown
+
 from neural_painters.data import FullActionStrokeDataLoader
 
 
@@ -86,12 +88,19 @@ class VAEPredictor(nn.Module):
 
 class VAENeuralPainter(nn.Module):
   """VAE Neural Painter nn.Module for inference"""
-  def __init__(self, action_size, z_size, stochastic=True):
+  def __init__(self, action_size, z_size, stochastic=True, pretrained=False):
     super(VAENeuralPainter, self).__init__()
 
     self.stochastic = stochastic
     self.predictor = VAEPredictor(action_size, z_size)
     self.decoder = VAEDecoder(z_size)
+
+    if pretrained:
+      url = 'https://drive.google.com/uc?id=1ETysXz9xFIooMlVvwlo5erENmU9JkKMv'
+      output = os.path.join(os.path.expanduser('~'), '.cache', 'neural_painters', 'checkpoints', 'vae_neural_painter_latest.tar')
+      print('Downloaded pretrained checkpoint to {}'.format(output))
+      gdown.download(url, output, quiet=False)
+      self.load_from_train_checkpoint(output)
 
   def forward(self, x):
     z, mu, log_var = self.predictor(x)
