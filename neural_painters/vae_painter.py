@@ -98,8 +98,12 @@ class VAENeuralPainter(nn.Module):
     if pretrained:
       url = 'https://drive.google.com/uc?id=1ETysXz9xFIooMlVvwlo5erENmU9JkKMv'
       output = os.path.join(os.path.expanduser('~'), '.cache', 'neural_painters', 'checkpoints', 'vae_neural_painter_latest.tar')
-      print('Downloaded pretrained checkpoint to {}'.format(output))
-      gdown.download(url, output, quiet=False)
+      if os.path.exists(output):
+        print('Using cached checkpoint at {}'.format(output))
+      else:
+        os.makedirs(os.path.dirname(output), exist_ok=True)
+        gdown.download(url, output, quiet=False)
+        print('Downloaded pretrained checkpoint to {}'.format(output))
       self.load_from_train_checkpoint(output)
 
   def forward(self, x):
