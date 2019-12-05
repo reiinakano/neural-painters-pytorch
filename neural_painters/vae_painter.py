@@ -1,6 +1,4 @@
 import os
-from typing import Callable
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -97,10 +95,6 @@ class VAENeuralPainter(nn.Module):
     self.predictor = VAEPredictor(action_size, z_size)
     self.decoder = VAEDecoder(z_size)
 
-    # By default this neural painter uses torch.sigmoid to make sure input actions are in the range [0, 1] i.e. backprop
-    #  can make the input actions go beyond this range.
-    self.action_preprocessor: Callable[[torch.Tensor], torch.Tensor] = torch.sigmoid
-
     if pretrained:
       url = 'https://drive.google.com/uc?id=1ETysXz9xFIooMlVvwlo5erENmU9JkKMv'
       output = os.path.join(os.path.expanduser('~'), '.cache', 'neural_painters', 'checkpoints', 'vae_neural_painter_latest.tar')
@@ -113,7 +107,7 @@ class VAENeuralPainter(nn.Module):
       self.load_from_train_checkpoint(output)
 
   def forward(self, x):
-    z, mu, log_var = self.predictor(self.action_preprocessor(x))
+    z, mu, log_var = self.predictor(x)
     if self.stochastic:
       return self.decoder(z)
     else:
@@ -124,17 +118,6 @@ class VAENeuralPainter(nn.Module):
     self.decoder.load_state_dict(checkpoint['decoder_state_dict'])
     self.predictor.load_state_dict(checkpoint['predictor_state_dict'])
     print('Loaded from {}. Batch {}'.format(ckpt_path, checkpoint['batch_idx']))
-
-  def set_action_preprocessor(self, preprocessor: Callable[[torch.Tensor], torch.Tensor]):
-    """
-    Set the action preprocessor for this neural painter. It is called on the input tensor before passing on to the
-    actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
-    controlling stroke thickness, etc.
-
-    By default this neural painter uses torch.sigmoid to make sure input actions are in the range [0, 1] i.e. backprop
-    can make the input actions go beyond this range.
-    """
-    self.action_preprocessor = preprocessor
 
 
 def reconstruction_loss_function(recon_x, x, mask_multiplier):

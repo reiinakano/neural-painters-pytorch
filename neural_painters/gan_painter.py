@@ -1,6 +1,4 @@
 import os
-from typing import Callable
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -95,10 +93,6 @@ class GANNeuralPainter(nn.Module):
 
     self.generator = Generator(action_size, dim, noise_dim, num_deterministic)
 
-    # By default this neural painter uses torch.sigmoid to make sure input actions are in the range [0, 1] i.e. backprop
-    #  can make the input actions go beyond this range.
-    self.action_preprocessor: Callable[[torch.Tensor], torch.Tensor] = torch.sigmoid
-
     if pretrained:
       url = 'https://drive.google.com/uc?id=1D1TQwnC4aWkWLmWrCbDJf2cXoiEnktl-'
       output = os.path.join(os.path.expanduser('~'), '.cache', 'neural_painters', 'checkpoints', 'gan_neural_painter_latest.tar')
@@ -111,23 +105,12 @@ class GANNeuralPainter(nn.Module):
       self.load_from_train_checkpoint(output)
 
   def forward(self, x):
-    return self.generator(self.action_preprocessor(x))
+    return self.generator(x)
 
   def load_from_train_checkpoint(self, ckpt_path):
     checkpoint = torch.load(ckpt_path)
     self.generator.load_state_dict(checkpoint['generator_state_dict'])
     print('Loaded from {}. Batch {}'.format(ckpt_path, checkpoint['batch_idx']))
-
-  def set_action_preprocessor(self, preprocessor: Callable[[torch.Tensor], torch.Tensor]):
-    """
-    Set the action preprocessor for this neural painter. It is called on the input tensor before passing on to the
-    actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
-    controlling stroke thickness, etc.
-
-    By default this neural painter uses torch.sigmoid to make sure input actions are in the range [0, 1] i.e. backprop
-    can make the input actions go beyond this range.
-    """
-    self.action_preprocessor = preprocessor
 
 
 def save_train_checkpoint(savedir: str,
