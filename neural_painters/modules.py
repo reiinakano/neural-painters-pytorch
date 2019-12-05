@@ -28,7 +28,14 @@ class NeuralCanvas(nn.Module):
   NeuralCanvas is a simple wrapper around a NeuralPainter. Maps a sequence of brushstrokes to a full canvas.
   Automatically performs blending.
   """
-  def __init__(self, neural_painter):
+  def __init__(self, neural_painter, action_preprocessor=torch.sigmoid):
+    """
+    action_preprocessor: Set the action preprocessor for this canvas. It is called on the input tensor before passing on
+    to the actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
+    controlling stroke thickness, etc. By default this canvas uses torch.sigmoid to make sure input actions are in the
+    range [0, 1] i.e. backprop can make the input actions go beyond this range. We suggest you call sigmoid() somewhere
+    as well if you plan to use your own action preprocessor.
+    """
     super(NeuralCanvas, self).__init__()
 
     self.neural_painter = neural_painter
@@ -37,7 +44,7 @@ class NeuralCanvas(nn.Module):
     self.final_canvas_height = 64
     self.final_canvas_width = 64
 
-    self.action_preprocessor = torch.sigmoid
+    self.action_preprocessor = action_preprocessor
 
   def forward(self, actions: torch.Tensor):
     """
@@ -56,18 +63,6 @@ class NeuralCanvas(nn.Module):
 
     return next_canvas, intermediate_canvases
 
-  def set_action_preprocessor(self, preprocessor: Callable[[torch.Tensor], torch.Tensor]):
-    """
-    Set the action preprocessor for this canvas. It is called on the input tensor before passing on to the
-    actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
-    controlling stroke thickness, etc.
-
-    By default this canvas uses torch.sigmoid to make sure input actions are in the range [0, 1] i.e. backprop
-    can make the input actions go beyond this range. We suggest you call sigmoid() somewhere as well if you plan to use
-    your own action preprocessor
-    """
-    self.action_preprocessor = preprocessor
-
 
 class NeuralCanvasStitched(nn.Module):
   """
@@ -75,7 +70,14 @@ class NeuralCanvasStitched(nn.Module):
   low-res neural painter.
   Maps a sequence of brushstrokes to a fully stitched canvas.
   """
-  def __init__(self, neural_painter, overlap_px=10, repeat_h=8, repeat_w=8, strokes_per_block=5):
+  def __init__(self, neural_painter, overlap_px=10, repeat_h=8, repeat_w=8, strokes_per_block=5, action_preprocessor=torch.sigmoid):
+    """
+    action_preprocessor: Set the action preprocessor for this canvas. It is called on the input tensor before passing on
+    to the actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
+    controlling stroke thickness, etc. By default this canvas uses torch.sigmoid to make sure input actions are in the
+    range [0, 1] i.e. backprop can make the input actions go beyond this range. We suggest you call sigmoid() somewhere
+    as well if you plan to use your own action preprocessor.
+    """
     super(NeuralCanvasStitched, self).__init__()
 
     self.neural_painter = neural_painter
@@ -88,7 +90,7 @@ class NeuralCanvasStitched(nn.Module):
     self.final_canvas_w = 64*repeat_w - overlap_px*(repeat_w - 1)
     self.total_num_strokes = strokes_per_block * repeat_h * repeat_w
 
-    self.action_preprocessor = torch.sigmoid
+    self.action_preprocessor = action_preprocessor
 
     print(f'final canvas size H: {self.final_canvas_h} W: {self.final_canvas_w}\t'
           f'total number of strokes: {self.total_num_strokes}')
@@ -119,18 +121,6 @@ class NeuralCanvasStitched(nn.Module):
 
         block_ctr += 1
     return next_canvas, intermediate_canvases
-
-  def set_action_preprocessor(self, preprocessor: Callable[[torch.Tensor], torch.Tensor]):
-    """
-    Set the action preprocessor for this canvas. It is called on the input tensor before passing on to the
-    actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
-    controlling stroke thickness, etc.
-
-    By default this canvas uses torch.sigmoid to make sure input actions are in the range [0, 1] i.e. backprop
-    can make the input actions go beyond this range. We suggest you call sigmoid() somewhere as well if you plan to use
-    your own action preprocessor
-    """
-    self.action_preprocessor = preprocessor
 
 
 class RandomScale(nn.Module):
