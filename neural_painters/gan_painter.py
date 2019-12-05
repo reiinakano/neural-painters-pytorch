@@ -88,10 +88,21 @@ class Generator(nn.Module):
 
 class GANNeuralPainter(nn.Module):
   """GAN Neural Painter nn.Module for inference"""
-  def __init__(self, action_size, dim=16, noise_dim=16, num_deterministic=0):
+  def __init__(self, action_size, dim=16, noise_dim=16, num_deterministic=0, pretrained=False):
     super(GANNeuralPainter, self).__init__()
 
     self.generator = Generator(action_size, dim, noise_dim, num_deterministic)
+
+    if pretrained:
+      url = 'https://drive.google.com/uc?id=1D1TQwnC4aWkWLmWrCbDJf2cXoiEnktl-'
+      output = os.path.join(os.path.expanduser('~'), '.cache', 'neural_painters', 'checkpoints', 'gan_neural_painter_latest.tar')
+      if os.path.exists(output):
+        print('Using cached checkpoint at {}'.format(output))
+      else:
+        os.makedirs(os.path.dirname(output), exist_ok=True)
+        gdown.download(url, output, quiet=False)
+        print('Downloaded pretrained checkpoint to {}'.format(output))
+      self.load_from_train_checkpoint(output)
 
   def forward(self, x):
     return self.generator(x)
