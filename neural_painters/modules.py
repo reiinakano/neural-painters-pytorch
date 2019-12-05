@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import random
+from typing import Callable
 
 import kornia
 
@@ -36,10 +37,13 @@ class NeuralCanvas(nn.Module):
     self.final_canvas_height = 64
     self.final_canvas_width = 64
 
+    self.action_preprocessor = torch.sigmoid
+
   def forward(self, actions: torch.Tensor):
     """
     actions: tensor of shape (num_strokes, batch_size, action_size)
     """
+    actions = self.action_preprocessor(actions)
     num_strokes, batch_size, action_size = actions.shape
 
     intermediate_canvases = []
@@ -51,6 +55,18 @@ class NeuralCanvas(nn.Module):
       intermediate_canvases.append(next_canvas.detach().cpu())
 
     return next_canvas, intermediate_canvases
+
+  def set_action_preprocessor(self, preprocessor: Callable[[torch.Tensor], torch.Tensor]):
+    """
+    Set the action preprocessor for this canvas. It is called on the input tensor before passing on to the
+    actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
+    controlling stroke thickness, etc.
+
+    By default this canvas uses torch.sigmoid to make sure input actions are in the range [0, 1] i.e. backprop
+    can make the input actions go beyond this range. We suggest you call sigmoid() somewhere as well if you plan to use
+    your own action preprocessor
+    """
+    self.action_preprocessor = preprocessor
 
 
 class NeuralCanvasStitched(nn.Module):
@@ -72,10 +88,13 @@ class NeuralCanvasStitched(nn.Module):
     self.final_canvas_w = 64*repeat_w - overlap_px*(repeat_w - 1)
     self.total_num_strokes = strokes_per_block * repeat_h * repeat_w
 
+    self.action_preprocessor = torch.sigmoid
+
     print(f'final canvas size H: {self.final_canvas_h} W: {self.final_canvas_w}\t'
           f'total number of strokes: {self.total_num_strokes}')
 
   def forward(self, actions: torch.Tensor):
+    actions = self.action_preprocessor(actions)
     num_strokes, batch_size, action_size = actions.shape
     assert num_strokes == self.total_num_strokes
 
@@ -100,6 +119,18 @@ class NeuralCanvasStitched(nn.Module):
 
         block_ctr += 1
     return next_canvas, intermediate_canvases
+
+  def set_action_preprocessor(self, preprocessor: Callable[[torch.Tensor], torch.Tensor]):
+    """
+    Set the action preprocessor for this canvas. It is called on the input tensor before passing on to the
+    actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
+    controlling stroke thickness, etc.
+
+    By default this canvas uses torch.sigmoid to make sure input actions are in the range [0, 1] i.e. backprop
+    can make the input actions go beyond this range. We suggest you call sigmoid() somewhere as well if you plan to use
+    your own action preprocessor
+    """
+    self.action_preprocessor = preprocessor
 
 
 class RandomScale(nn.Module):
