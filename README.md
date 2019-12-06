@@ -6,6 +6,15 @@ Neural Painters: A learned differentiable constraint for generating brushstroke 
 
 https://arxiv.org/abs/1904.08410
 
+## Dependencies
+
+Dependencies are listed in [`environment.yaml`](https://github.com/reiinakano/neural-painters-pytorch/tree/master/environment.yaml) but the notable ones are:
+
+* PyTorch 1.3+
+* kornia
+* gdown
+* (Optional) MyPaint - installing this is a bit of a pain but you can view examples of how to set up the exact versions in the notebooks [`train_vae_painter.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/train_vae_painter.ipynb) and [`train_gan_painter.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/train_gan_painter.ipynb).
+
 ## Notebooks
 
 The best way to figure out how to use this code is to play around with the provided Colaboratory notebooks. We provide pre-trained neural painters.
