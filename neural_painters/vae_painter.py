@@ -1,3 +1,4 @@
+"""Contains classes and functions for a VAE neural painter"""
 import os
 import torch
 import torch.nn as nn

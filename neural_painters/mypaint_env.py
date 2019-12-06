@@ -1,4 +1,8 @@
-# Most of this code is based on Taehoon Kim's SPIRAL implementation https://github.com/carpedm20/SPIRAL-tensorflow
+"""
+Contains the MyPaint environment
+
+Most of this code is based on Taehoon Kim's SPIRAL implementation https://github.com/carpedm20/SPIRAL-tensorflow
+"""
 
 try:
   from lib import surface, tiledsurface, brush  # , floodfill for latest mypaint
