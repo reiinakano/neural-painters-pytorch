@@ -96,7 +96,7 @@ class GANNeuralPainter(nn.Module):
     :param noise_dim: number of dimensions of noise vector. if 0, will be purely deterministic
     :param num_deterministic: sets neural painter stochasticity during inference. set equal to noise_dim for
     purely deterministic neural painter. set to 0 for fully stochastic neural painter.
-    :param pretrained: Use pretrained neural painter. Pretrained neural painter has dim=16 and noise_dim=16
+    :param pretrained: Use pretrained neural painter. Pretrained neural painter has action_size=12 dim=16 and noise_dim=16
     """
     super(GANNeuralPainter, self).__init__()
 
@@ -197,7 +197,8 @@ def train_gan_neural_painter(action_size: int,
                              tensorboard_log_dir: str = 'logdir',
                              save_dir: str = 'gan_train_checkpoints',
                              save_name: str = 'gan_neural_painter'):
-  """
+  """Trains GAN Neural Painter. Refer to the paper for details.
+
   :param action_size: number of dimensions of action
   :param dim_size: dictates size of network
   :param batch_size: batch size used in training

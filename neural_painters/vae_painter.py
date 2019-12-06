@@ -90,6 +90,12 @@ class VAEPredictor(nn.Module):
 class VAENeuralPainter(nn.Module):
   """VAE Neural Painter nn.Module for inference"""
   def __init__(self, action_size, z_size, stochastic=True, pretrained=False):
+    """
+    :param action_size: number of dimensions of action
+    :param z_size: latent space dimension
+    :param stochastic: make neural painter stochastic
+    :param pretrained: use pretrained neural painter. Pretrained neural painter has action_size=12 and z_size=64
+    """
     super(VAENeuralPainter, self).__init__()
 
     self.stochastic = stochastic
@@ -188,6 +194,22 @@ def train_vae_neural_painter(z_size: int,
                              tensorboard_log_dir: str = 'logdir',
                              save_dir: str = 'vae_train_checkpoints',
                              save_name: str = 'vae_neural_painter'):
+  """Trains VAE neural painter in two parts. Refer to the paper for details.
+
+  :param z_size: latent space size
+  :param action_size: action dimension
+  :param batch_size: batch size used in training
+  :param kl_tolerance: KL tolerance
+  :param device: torch.device used in training
+  :param data_dir: where the training data is stored
+  :param vae_train_steps: How many training steps for first part i.e. VAE train steps
+  :param save_every_n_steps: save checkpoint every n steps
+  :param log_every_n_steps: print a log every n steps
+  :param tensorboard_every_n_steps: log to tensorboard every n steps
+  :param tensorboard_log_dir: tensorboard log directory
+  :param save_dir: save directory for checkpoints
+  :param save_name: save name used for extra identification
+  """
   # Initialize data loader
   loader = FullActionStrokeDataLoader(data_dir, batch_size, False)
 
