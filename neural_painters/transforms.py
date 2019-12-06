@@ -12,7 +12,12 @@ import kornia
 
 
 class RandomScale(nn.Module):
+  """Module for randomly scaling an image"""
   def __init__(self, scales):
+    """
+    :param scales: list of scales to randomly choose from e.g. [0.8, 1.0, 1.2] will randomly scale an image by
+      0.8, 1.0, or 1.2
+    """
     super(RandomScale, self).__init__()
 
     self.scales = scales
@@ -23,7 +28,11 @@ class RandomScale(nn.Module):
 
 
 class RandomCrop(nn.Module):
+  """Module for randomly cropping an image"""
   def __init__(self, size: int):
+    """
+    :param size: How much to crop from both sides. e.g. 8 will remove 8 pixels in both x and y directions.
+    """
     super(RandomCrop, self).__init__()
     self.size = size
 
@@ -35,7 +44,12 @@ class RandomCrop(nn.Module):
 
 
 class RandomRotate(nn.Module):
+  """Module for randomly rotating an image"""
   def __init__(self, angle=10, same_throughout_batch=False):
+    """
+    :param angle: Angle in degrees
+    :param same_throughout_batch: Degree of rotation, although random, is kept the same throughout a single batch.
+    """
     super(RandomRotate, self).__init__()
     self.angle=angle
     self.same_throughout_batch = same_throughout_batch
@@ -59,6 +73,7 @@ class RandomRotate(nn.Module):
 
 
 class Normalization(nn.Module):
+  """Normalization module"""
   def __init__(self, mean, std):
     super(Normalization, self).__init__()
     # .view the mean and std to make them [C x 1 x 1] so that they can
