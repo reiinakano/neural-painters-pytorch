@@ -9,6 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 import gdown
 
 from neural_painters.data import FullActionStrokeDataLoader
+from neural_painters.common import reconstruction_loss_function
 
 
 # custom weights initialization called on netG and netD
@@ -89,6 +90,14 @@ class Generator(nn.Module):
 class GANNeuralPainter(nn.Module):
   """GAN Neural Painter nn.Module for inference"""
   def __init__(self, action_size, dim=16, noise_dim=16, num_deterministic=0, pretrained=False):
+    """
+    :param action_size: number of dimensions of action
+    :param dim: dictates size of network
+    :param noise_dim: number of dimensions of noise vector. if 0, will be purely deterministic
+    :param num_deterministic: sets neural painter stochasticity during inference. set equal to noise_dim for
+    purely deterministic neural painter. set to 0 for fully stochastic neural painter.
+    :param pretrained: Use pretrained neural painter. Pretrained neural painter has dim=16 and noise_dim=16
+    """
     super(GANNeuralPainter, self).__init__()
 
     self.generator = Generator(action_size, dim, noise_dim, num_deterministic)
@@ -152,29 +161,10 @@ def load_from_latest_checkpoint(savedir: str,
   return checkpoint['batch_idx']
 
 
-def reconstruction_loss_function(recon_x, x, mask_multiplier):
-  """
-  This is MSE but with non-whitespace areas of the brushstroke weighted by mask_multiplier.
-  """
-  if mask_multiplier != 1.:
-    mask = torch.mean(x, dim=1)
-    stroke_whitespace = torch.eq(mask, torch.ones_like(mask))
-    mask = torch.where(stroke_whitespace, torch.ones_like(mask),
-                       torch.ones_like(mask) * mask_multiplier)
-    mask = mask.view(-1, 1, 64, 64)
-    MSE = torch.sum((recon_x - x) ** 2 * mask, dim=[1, 2, 3])
-  else:
-    mask = None
-    MSE = torch.sum((recon_x - x) ** 2, dim=[1, 2, 3])
-  MSE = torch.mean(MSE)
-  return MSE, mask
-
-
 def calc_gradient_penalty(discriminator: nn.Module, real_data: torch.Tensor,
                           fake_data: torch.Tensor, actions: torch.Tensor,
                           device: torch.device, scale: float):
   batch_size = real_data.shape[0]
-  #epsilon = torch.rand(batch_size, 1)  # in my tf implementation, same epsilon used for all samples in minibatch
   epsilon = torch.rand(1, 1)
   epsilon = epsilon.expand(batch_size, real_data.nelement()//batch_size).contiguous().view(batch_size, 3, 64, 64)
   epsilon = epsilon.to(device)
@@ -200,14 +190,29 @@ def train_gan_neural_painter(action_size: int,
                              data_dir: str,
                              noise_dim: int = 16,
                              disc_iters: int = 5,
-                             use_reconstruction_loss: bool = False,
-                             stop_reconstruction_loss_after_n_steps: int = 10000000,
+                             use_reconstruction_loss: bool = True,
                              save_every_n_steps: int = 25000,
                              log_every_n_steps: int = 2000,
                              tensorboard_every_n_steps: int = 100,
                              tensorboard_log_dir: str = 'logdir',
                              save_dir: str = 'gan_train_checkpoints',
                              save_name: str = 'gan_neural_painter'):
+  """
+  :param action_size: number of dimensions of action
+  :param dim_size: dictates size of network
+  :param batch_size: batch size used in training
+  :param device: torch.device used in training
+  :param data_dir: where the training data is stored
+  :param noise_dim: number of dimensions of noise vector. if 0, neural painter will be deterministic
+  :param disc_iters: number of iterations of discriminator per iteration of generator
+  :param use_reconstruction_loss: use reconstruction loss in addition to adversarial loss during training.
+  :param save_every_n_steps: save checkpoint every n steps
+  :param log_every_n_steps: print a log every n steps
+  :param tensorboard_every_n_steps: log to tensorboard every n steps
+  :param tensorboard_log_dir: tensorboard log directory
+  :param save_dir: save directory for checkpoints
+  :param save_name: save name used for extra identification
+  """
   # Initialize data loader
   loader = FullActionStrokeDataLoader(data_dir, batch_size, False)
 
@@ -249,7 +254,7 @@ def train_gan_neural_painter(action_size: int,
 
         generator_loss = generated_score
 
-        if use_reconstruction_loss and batch_idx < stop_reconstruction_loss_after_n_steps:
+        if use_reconstruction_loss:
           uneven_mult = 10. if batch_idx < 100000 else 1.  # Do I need this?
           if batch_idx < 500000:
             reconstruction_loss_mult = 10.
