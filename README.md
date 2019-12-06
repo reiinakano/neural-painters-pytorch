@@ -12,28 +12,20 @@ We explore neural painters, a generative model for brushstrokes learned from a r
 
 ## Notebooks
 
+The best way to figure out how to use this code is to play around with the provided Colaboratory notebooks. We provide pre-trained neural painters.
+
 There are runnable notebooks for the paper in the [`notebooks/`](https://github.com/reiinakano/neural-painters-pytorch/tree/master/notebooks) folder.
 
 To completely reproduce the paper from scratch, there is technically a logical order in which to run these notebooks. 
 
 However, since most people will probably only be interested in certain parts of the paper, we have designed them so you will be able to run each part as standalone notebooks. For example, we have provided pre-trained neural painters so you can run the style transfer notebook without having to train your own neural painter.
 
-# Notebook descriptions
-
-* `generate_stroke_examples.ipynb` (under construction) - This notebook contains code to generate pre-calculated mappings from action space to brushstroke image. If you don't want to run this, you can always just use the ones we uploaded to [Kaggle](https://www.kaggle.com/reiinakano/mypaint_brushstrokes).
-
-* [`train_vae_painter.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/train_vae_painter.ipynb) and [`train_gan_painter.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/train_gan_painter.ipynb) - These notebooks contain code to train VAE and GAN neural painters, respectively. Requires the output from `generate_stroke_examples.ipynb`.
+* [`train_vae_painter.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/train_vae_painter.ipynb) and [`train_gan_painter.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/train_gan_painter.ipynb) - These notebooks contain code to train VAE and GAN neural painters, respectively.
 
 ![vae](readme_img/vae_neural_painter_example.jpg)
 ![gan](readme_img/gan_neural_painter_example.jpg)
 
-* `recreating_spiral.ipynb` (under construction) - Contains code for the "Recreating SPIRAL Results" section in the paper. Requires a neural painter. We provide pre-trained neural painters if you don't want to train your own.
-
-![spiral](readme_img/spiral_examples.jpg)
-
-* `learning_human_strokes.ipynb` (under construction) - Contains code for the "Towards Learning Human Strokes" section of the paper. Requires a neural painter. We provide pre-trained neural painters if you don't want to train your own.
-
-* [`visualizing_imagenet_classes.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/visualizing_imagenet.ipynb) - Contains code for the "Visualizing ImageNet Classes" subsection of the paper. Requires a neural painter. We provide pre-trained neural painters if you don't want to train your own.
+* [`visualizing_imagenet.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/visualizing_imagenet.ipynb) - Contains code for the "Visualizing ImageNet Classes" subsection of the paper. Requires a neural painter. We provide pre-trained neural painters if you don't want to train your own.
 
 ![visualize_imagenet](readme_img/mix.jpg)
 
