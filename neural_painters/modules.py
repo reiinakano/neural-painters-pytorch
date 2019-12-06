@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import random
-from typing import Callable
 
 import kornia
 
@@ -30,6 +29,7 @@ class NeuralCanvas(nn.Module):
   """
   def __init__(self, neural_painter, action_preprocessor=torch.sigmoid):
     """
+    neural_painter: Neural painter to wrap
     action_preprocessor: Set the action preprocessor for this canvas. It is called on the input tensor before passing on
     to the actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
     controlling stroke thickness, etc. By default this canvas uses torch.sigmoid to make sure input actions are in the
@@ -49,6 +49,11 @@ class NeuralCanvas(nn.Module):
   def forward(self, actions: torch.Tensor):
     """
     actions: tensor of shape (num_strokes, batch_size, action_size)
+
+    Returns tuple of:
+      final_canvas: Image tensor of shape (batch_size, height, width). contains final canvas.
+      intermediate_canvases: List of image tensors of shape (batch_size, height, width).
+                             Each tensor in the list represents one stroke. Used for visualization.
     """
     actions = self.action_preprocessor(actions)
     num_strokes, batch_size, action_size = actions.shape
@@ -67,11 +72,16 @@ class NeuralCanvas(nn.Module):
 class NeuralCanvasStitched(nn.Module):
   """
   NeuralCanvasStitched is a collection of NeuralCanvas stitched together. Used to get higher resolution images from a
-  low-res neural painter.
+  low-res 64px neural painter.
   Maps a sequence of brushstrokes to a fully stitched canvas.
   """
   def __init__(self, neural_painter, overlap_px=10, repeat_h=8, repeat_w=8, strokes_per_block=5, action_preprocessor=torch.sigmoid):
     """
+    neural_painter: neural painter to wrap
+    overlap_px: number of overlapping pixels between canvases
+    repeat_h: number of canvases stitched together for height of final canvas
+    repeat_w: number of canvases stitched together for width of final canvas
+    strokes_per_block: Number of strokes per canvas.
     action_preprocessor: Set the action preprocessor for this canvas. It is called on the input tensor before passing on
     to the actual neural painter. This is where one can specify manual constraints on actions e.g. grayscale strokes,
     controlling stroke thickness, etc. By default this canvas uses torch.sigmoid to make sure input actions are in the
@@ -96,6 +106,14 @@ class NeuralCanvasStitched(nn.Module):
           f'total number of strokes: {self.total_num_strokes}')
 
   def forward(self, actions: torch.Tensor):
+    """
+    actions: tensor of shape (num_strokes, batch_size, action_size)
+
+    Returns tuple of:
+      final_canvas: Image tensor of shape (batch_size, height, width). contains final canvas.
+      intermediate_canvases: List of image tensors of shape (batch_size, height, width).
+                             Each tensor in the list represents one stroke. Used for visualization.
+    """
     actions = self.action_preprocessor(actions)
     num_strokes, batch_size, action_size = actions.shape
     assert num_strokes == self.total_num_strokes
