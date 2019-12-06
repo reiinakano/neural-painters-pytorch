@@ -6,19 +6,13 @@ Neural Painters: A learned differentiable constraint for generating brushstroke 
 
 https://arxiv.org/abs/1904.08410
 
-## Abstract
-
-We explore neural painters, a generative model for brushstrokes learned from a real non-differentiable and non-deterministic painting program. We show that when training an agent to "paint" images using brushstrokes, using a differentiable neural painter leads to much faster convergence. We propose a method for encouraging this agent to follow human-like strokes when reconstructing digits. We also explore the use of a neural painter as a differentiable image parameterization. By directly optimizing brushstrokes to activate neurons in a pre-trained convolutional network, we can directly visualize ImageNet categories and generate "ideal" paintings of each class. Finally, we present a new concept called *intrinsic style transfer*. By minimizing only the content loss from neural style transfer, we allow the artistic medium, in this case, brushstrokes, to naturally dictate the resulting style.
-
 ## Notebooks
 
 The best way to figure out how to use this code is to play around with the provided Colaboratory notebooks. We provide pre-trained neural painters.
 
 There are runnable notebooks for the paper in the [`notebooks/`](https://github.com/reiinakano/neural-painters-pytorch/tree/master/notebooks) folder.
 
-To completely reproduce the paper from scratch, there is technically a logical order in which to run these notebooks. 
-
-However, since most people will probably only be interested in certain parts of the paper, we have designed them so you will be able to run each part as standalone notebooks. For example, we have provided pre-trained neural painters so you can run the style transfer notebook without having to train your own neural painter.
+Since most people will probably only be interested in certain parts of the paper, we have designed them so you will be able to run each part as standalone notebooks. For example, we have provided pre-trained neural painters so you can run the style transfer notebook without having to train your own neural painter.
 
 * [`train_vae_painter.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/train_vae_painter.ipynb) and [`train_gan_painter.ipynb`](https://colab.research.google.com/github/reiinakano/neural-painters-pytorch/blob/master/notebooks/train_gan_painter.ipynb) - These notebooks contain code to train VAE and GAN neural painters, respectively.
 
